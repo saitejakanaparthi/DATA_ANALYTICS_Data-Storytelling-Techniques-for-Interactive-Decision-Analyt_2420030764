@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Storytelling Dashboard</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+    <style>
+        /* =====================================================
+           EXTRA KPI STYLES & OVERRIDES
+           ===================================================== */
+        .kpi-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .kpi.customers {
+            border-left: 5px solid #7c3aed;
+        }
+
+        .kpi.margin {
+            border-left: 5px solid #06b6d4;
+        }
+
+        .recommendation {
+            border-left: 5px solid #10b981;
+            background: #ecfdf5;
+        }
+
+        .recommendation span {
+            color: #059669;
+        }
+
+        @media (max-width: 1100px) {
+            .kpi-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 650px) {
+            .kpi-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="dashboard">
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+    <header class="header">
+        <div>
+            <h1>📊 Data Storytelling</h1>
+            <p>Interactive Decision Analytics Platform</p>
+        </div>
+        <div class="header-badge">
+            DATA ANALYTICS
+        </div>
+    </header>
+
+    <!-- =====================================================
+         FILTERS
+         ===================================================== -->
+    <section class="filters">
+        <div class="filter">
+            <label>DATASET</label>
+            <select id="datasetFilter">
+                <option value="superstore">Superstore Dataset</option>
+                <option value="global">Global Superstore</option>
+                <option value="online">Online Sales</option>
+                <option value="supermarket">Supermarket Dataset</option>
+            </select>
+        </div>
+
+        <div class="filter">
+            <label>YEAR</label>
+            <select id="yearFilter">
+                <option value="All">All Years</option>
+            </select>
+        </div>
+
+        <div class="filter">
+            <label>CATEGORY</label>
+            <select id="categoryFilter">
+                <option value="All">All Categories</option>
+            </select>
+        </div>
+
+        <div class="filter">
+            <label>REGION</label>
+            <select id="regionFilter">
+                <option value="All">All Regions</option>
+            </select>
+        </div>
+
+        <div class="filter">
+            <label>SEGMENT</label>
+            <select id="segmentFilter">
+                <option value="All">All Segments</option>
+            </select>
+        </div>
+
+        <button onclick="resetFilters()">
+            Reset Filters
+        </button>
+    </section>
+
+    <!-- =====================================================
+         KPI CARDS
+         ===================================================== -->
+    <section class="kpi-grid">
+
+        <div class="kpi sales">
+            <div class="kpi-icon">💰</div>
+            <div>
+                <h3>Total Sales</h3>
+                <h2 id="totalSales">0</h2>
+            </div>
+        </div>
+
+        <div class="kpi profit">
+            <div class="kpi-icon">📈</div>
+            <div>
+                <h3>Total Profit</h3>
+                <h2 id="totalProfit">0</h2>
+            </div>
+        </div>
+
+        <div class="kpi orders">
+            <div class="kpi-icon">🧾</div>
+            <div>
+                <h3>Total Orders</h3>
+                <h2 id="totalOrders">0</h2>
+            </div>
+        </div>
+
+        <div class="kpi quantity">
+            <div class="kpi-icon">📦</div>
+            <div>
+                <h3>Total Quantity</h3>
+                <h2 id="totalQuantity">0</h2>
+            </div>
+        </div>
+
+        <div class="kpi customers">
+            <div class="kpi-icon">👥</div>
+            <div>
+                <h3>Total Customers</h3>
+                <h2 id="totalCustomers">0</h2>
+            </div>
+        </div>
+
+        <div class="kpi margin">
+            <div class="kpi-icon">💹</div>
+            <div>
+                <h3>Profit Margin</h3>
+                <h2 id="profitMargin">0%</h2>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- =====================================================
+         SALES TREND
+         ===================================================== -->
+    <section class="card large-card">
+        <div class="card-title">
+            <div>
+                <h2>📈 Sales Trend</h2>
+                <p class="subtitle">Monthly sales performance</p>
+            </div>
+        </div>
+        <div id="salesTrend"></div>
+    </section>
+
+    <!-- =====================================================
+         CATEGORY + REGION
+         ===================================================== -->
+    <section class="chart-grid">
+        <div class="card">
+            <h2>🏷 Sales by Category</h2>
+            <p class="subtitle">Category performance comparison</p>
+            <div id="categoryChart"></div>
+        </div>
+
+        <div class="card">
+            <h2>🌎 Sales by Region</h2>
+            <p class="subtitle">Regional performance</p>
+            <div id="regionChart"></div>
+        </div>
+    </section>
+
+    <!-- =====================================================
+         TOP PRODUCTS + DATA STORY
+         ===================================================== -->
+    <section class="chart-grid">
+        <div class="card">
+            <h2>🏆 Top Products</h2>
+            <p class="subtitle">Highest-performing products</p>
+            <div id="productChart"></div>
+        </div>
+
+        <div class="card story-card">
+            <h2>💡 Data Story</h2>
+            <div id="story">
+                <div class="story-item">
+                    <span>🔍 FINDING</span>
+                    <p id="finding">Analyzing your data...</p>
+                </div>
+
+                <div class="story-item">
+                    <span>📊 MEANING</span>
+                    <p id="meaning">Insights will appear here.</p>
+                </div>
+
+                <div class="story-item">
+                    <span>🎯 DECISION</span>
+                    <p id="decision">Decision support will appear here.</p>
+                </div>
+
+                <div class="story-item recommendation">
+                    <span>🚀 RECOMMENDATION</span>
+                    <p id="recommendation">Recommendations will appear here.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =====================================================
+         SALES BY SEGMENT + PROFIT BY CATEGORY
+         ===================================================== -->
+    <section class="chart-grid">
+        <div class="card">
+            <h2>👥 Sales by Customer Segment</h2>
+            <p class="subtitle">Comparison of customer segments</p>
+            <div id="segmentChart"></div>
+        </div>
+
+        <div class="card">
+            <h2>📈 Profit by Category</h2>
+            <p class="subtitle">Category profitability comparison</p>
+            <div id="profitCategoryChart"></div>
+        </div>
+    </section>
+
+    <!-- =====================================================
+         DISCOUNT VS PROFIT
+         ===================================================== -->
+    <section class="card large-card">
+        <h2>🎯 Discount vs Profit</h2>
+        <p class="subtitle">Understanding the impact of discounts on profitability</p>
+        <div id="discountProfitChart"></div>
+    </section>
+
+    <!-- =====================================================
+         🤖 ML MODEL COMPARATIVE ANALYSIS
+         ===================================================== -->
+    <section class="card large-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+                <h2>🤖 ML Model Comparative Analysis</h2>
+                <p class="subtitle">
+                    Benchmarking Literature Regression Models against Proposed Hybrid Stacked Regression Ensemble (HSRE)
+                </p>
+            </div>
+            <span class="model-badge badge-proposed" style="padding:6px 12px; font-size:12px;">
+                Regression Performance Benchmarking
+            </span>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="ml-kpi-grid">
+            <div class="ml-kpi-card best-model">
+                <h4>🏆 Best Model</h4>
+                <div class="ml-metric-val" id="bestMLModel">Loading...</div>
+                <div class="ml-metric-sub">Highest R² Score Performer</div>
+            </div>
+
+            <div class="ml-kpi-card r2-score">
+                <h4>📊 Best R² Score</h4>
+                <div class="ml-metric-val" id="bestMLR2">Loading...</div>
+                <div class="ml-metric-sub">Coefficient of Determination</div>
+            </div>
+
+            <div class="ml-kpi-card mae-score">
+                <h4>📉 Associated MAE</h4>
+                <div class="ml-metric-val" id="bestMLMAE">Loading...</div>
+                <div class="ml-metric-sub">Mean Absolute Error (Lower is better)</div>
+            </div>
+
+            <div class="ml-kpi-card rmse-score">
+                <h4>📐 Associated RMSE</h4>
+                <div class="ml-metric-val" id="bestMLRMSE">Loading...</div>
+                <div class="ml-metric-sub">Root Mean Squared Error (Lower is better)</div>
+            </div>
+        </div>
+
+        <!-- Research-Friendly Comparison Table -->
+        <div class="ml-table-container">
+            <table class="ml-table">
+                <thead>
+                    <tr>
+                        <th>Regression Model</th>
+                        <th>Model Architecture / Role</th>
+                        <th>R² Score</th>
+                        <th>MAE</th>
+                        <th>RMSE</th>
+                    </tr>
+                </thead>
+                <tbody id="mlComparisonTable">
+                    <tr>
+                        <td colspan="5" style="padding:20px; text-align:center; color:#64748b;">
+                            Training ML models on selected dataset...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Comparison Charts Grid (R² Score & MAE) -->
+        <div class="ml-charts-subgrid">
+            <div class="card" style="margin-bottom:0; box-shadow:none; border:1px solid #e2e8f0;">
+                <h3 style="font-size:16px; margin-bottom:4px; color:#1e293b;">📊 R² Score Comparison</h3>
+                <p class="subtitle" style="margin-bottom:12px;">Comparative coefficient of determination (R²)</p>
+                <div id="mlR2Chart" style="min-height:320px;"></div>
+            </div>
+
+            <div class="card" style="margin-bottom:0; box-shadow:none; border:1px solid #e2e8f0;">
+                <h3 style="font-size:16px; margin-bottom:4px; color:#1e293b;">📉 MAE Comparison</h3>
+                <p class="subtitle" style="margin-bottom:12px;">Mean Absolute Error across models (Lower is better)</p>
+                <div id="mlMAEChart" style="min-height:320px;"></div>
+            </div>
+        </div>
+
+        <!-- Comparison Charts Grid (RMSE & HSRE Actual vs Predicted) -->
+        <div class="ml-charts-subgrid" style="margin-top:20px;">
+            <div class="card" style="margin-bottom:0; box-shadow:none; border:1px solid #e2e8f0;">
+                <h3 style="font-size:16px; margin-bottom:4px; color:#1e293b;">📐 RMSE Comparison</h3>
+                <p class="subtitle" style="margin-bottom:12px;">Root Mean Squared Error across models (Lower is better)</p>
+                <div id="mlRMSEChart" style="min-height:320px;"></div>
+            </div>
+
+            <div class="card" style="margin-bottom:0; box-shadow:none; border:1px solid #e2e8f0;">
+                <h3 style="font-size:16px; margin-bottom:4px; color:#1e293b;">🎯 HSRE Actual vs Predicted Sales</h3>
+                <p class="subtitle" style="margin-bottom:12px;">Proposed Hybrid Stacked Regression Ensemble (HSRE) fit</p>
+                <div id="mlHSREActualVsPredChart" style="min-height:320px;"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- =====================================================
+         DECISION ANALYTICS
+         ===================================================== -->
+    <section class="card large-card">
+        <h2>🧠 Decision Analytics</h2>
+        <p class="subtitle">
+            Finding → Meaning → Decision → Recommendation
+        </p>
+
+        <div class="decision-grid">
+            <div class="decision-box">
+                <h3>🔍 Finding</h3>
+                <p id="decisionFinding">
+                    Technology generates the highest sales among the categories.<br>
+                    This makes Technology a major revenue contributor.<br>
+                    Compare its profit with other categories.<br>
+                    Identify whether high sales also result in strong profits.
+                </p>
+            </div>
+
+            <div class="decision-box">
+                <h3>📊 Meaning</h3>
+                <p id="decisionMeaning">
+                    The overall profit margin is 11.61%.<br>
+                    It represents the percentage of sales retained as profit.<br>
+                    Compare margins across categories.<br>
+                    Identify which categories offer better profitability.
+                </p>
+            </div>
+
+            <div class="decision-box">
+                <h3>🎯 Decision</h3>
+                <p id="decisionAction">
+                    Prioritize products and categories that generate strong profits.<br>
+                    Review sales, profit, and discount patterns.<br>
+                    Consider both revenue and profitability.<br>
+                    Allocate resources based on the available evidence.
+                </p>
+            </div>
+
+            <div class="decision-box">
+                <h3>🚀 Recommendation</h3>
+                <p id="decisionRecommendation">
+                    Promote products with strong sales and healthy profit margins.<br>
+                    Review pricing and discounts to protect profitability.<br>
+                    Avoid unnecessary costs where possible.<br>
+                    Use dashboard insights to guide inventory and marketing decisions.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- =====================================================
+         FOOTER
+         ===================================================== -->
+    <footer>
+        <p>Data Storytelling Techniques for Interactive Decision Analytics</p>
+        <span>Python • Flask • Pandas • Scikit-Learn • Plotly</span>
+    </footer>
+
+</div>
+
+
+<!-- =========================================================
+     JAVASCRIPT LOGIC
+     ========================================================= -->
+<script>
+
+/* Global State */
+let originalData = [];
+let filteredData = [];
+let selectedDataset = "superstore";
+
+/* Helper: Safe Column Search */
+function findColumn(data, names) {
+    if (!data || data.length === 0) {
+        return null;
+    }
+    const columns = Object.keys(data[0]);
+    for (const name of names) {
+        const found = columns.find(col => col.toLowerCase() === name.toLowerCase());
+        if (found) {
+            return found;
+        }
+    }
+    return null;
+}
+
+/* Helper: Number Formatter */
+function formatNumber(number) {
+    return Number(number || 0).toLocaleString(undefined, {
+        maximumFractionDigits: 0
+    });
+}
+
+/* Helper: Aggregation */
+function groupData(data, column, valueColumn) {
+    const result = {};
+    if (!data || !column || !valueColumn) return result;
+
+    data.forEach(row => {
+        const key = row[column];
+        if (key === null || key === undefined || key === "") return;
+        const value = Number(row[valueColumn]) || 0;
+        result[key] = (result[key] || 0) + value;
+    });
+    return result;
+}
+
+/* Helper: Empty or Unavailable Chart State */
+function showEmptyChart(divId, message) {
+    Plotly.newPlot(
+        divId,
+        [],
+        {
+            paper_bgcolor: "transparent",
+            plot_bgcolor: "transparent",
+            xaxis: { visible: false },
+            yaxis: { visible: false },
+            annotations: [{
+                text: message || "Data not available for this dataset",
+                xref: "paper",
+                yref: "paper",
+                showarrow: false,
+                font: { size: 14, color: "#64748b" }
+            }],
+            margin: { t: 40, b: 40, l: 40, r: 40 }
+        },
+        { responsive: true }
+    );
+}
+
+/* ============================================================
+   LOAD DATASET
+   ============================================================ */
+function loadDataset(dataset) {
+    selectedDataset = dataset;
+
+    fetch("/data?dataset=" + encodeURIComponent(dataset))
+        .then(response => {
+            if (!response.ok) throw new Error("Network response was not ok");
+            return response.json();
+        })
+        .then(data => {
+            originalData = data;
+            filteredData = data;
+
+            setupFilters(data);
+            updateDashboard();
+            updateMLPrediction();
+        })
+        .catch(error => {
+            console.error("Error loading data:", error);
+        });
+}
+
+/* ============================================================
+   SETUP FILTERS
+   ============================================================ */
+function setupFilters(data) {
+    const yearColumn = findColumn(data, ["Year", "Order_Date_Year"]);
+    const categoryColumn = findColumn(data, ["Category"]);
+    const regionColumn = findColumn(data, ["Region"]);
+    const segmentColumn = findColumn(data, ["Segment"]);
+
+    const yearSelect = document.getElementById("yearFilter");
+    const catSelect = document.getElementById("categoryFilter");
+    const regSelect = document.getElementById("regionFilter");
+    const segSelect = document.getElementById("segmentFilter");
+
+    yearSelect.innerHTML = '<option value="All">All Years</option>';
+    catSelect.innerHTML = '<option value="All">All Categories</option>';
+    regSelect.innerHTML = '<option value="All">All Regions</option>';
+    segSelect.innerHTML = '<option value="All">All Segments</option>';
+
+    if (yearColumn) {
+        const years = [
+            ...new Set(
+                data
+                    .map(row => row[yearColumn])
+                    .filter(val => val !== null && val !== undefined && val !== "" && !isNaN(val))
+            )
+        ].sort((a, b) => a - b);
+
+        years.forEach(year => {
+            yearSelect.innerHTML += `<option value="${year}">${year}</option>`;
+        });
+    }
+
+    addFilterValues("categoryFilter", data, categoryColumn);
+    addFilterValues("regionFilter", data, regionColumn);
+    addFilterValues("segmentFilter", data, segmentColumn);
+}
+
+function addFilterValues(id, data, column) {
+    if (!column) return;
+    const select = document.getElementById(id);
+    const values = [
+        ...new Set(
+            data
+                .map(row => row[column])
+                .filter(val => val !== null && val !== undefined && val !== "")
+        )
+    ].sort();
+
+    values.forEach(val => {
+        select.innerHTML += `<option value="${val}">${val}</option>`;
+    });
+}
+
+/* ============================================================
+   APPLY FILTERS
+   ============================================================ */
+function applyFilters() {
+    const year = document.getElementById("yearFilter").value;
+    const category = document.getElementById("categoryFilter").value;
+    const region = document.getElementById("regionFilter").value;
+    const segment = document.getElementById("segmentFilter").value;
+
+    const yearColumn = findColumn(originalData, ["Year", "Order_Date_Year"]);
+    const categoryColumn = findColumn(originalData, ["Category"]);
+    const regionColumn = findColumn(originalData, ["Region"]);
+    const segmentColumn = findColumn(originalData, ["Segment"]);
+
+    filteredData = originalData.filter(row => {
+        let yearMatch = true;
+        let categoryMatch = true;
+        let regionMatch = true;
+        let segmentMatch = true;
+
+        if (year !== "All" && yearColumn) {
+            yearMatch = String(row[yearColumn]) === String(year);
+        }
+        if (category !== "All" && categoryColumn) {
+            categoryMatch = String(row[categoryColumn]) === String(category);
+        }
+        if (region !== "All" && regionColumn) {
+            regionMatch = String(row[regionColumn]) === String(region);
+        }
+        if (segment !== "All" && segmentColumn) {
+            segmentMatch = String(row[segmentColumn]) === String(segment);
+        }
+
+        return yearMatch && categoryMatch && regionMatch && segmentMatch;
+    });
+}
+
+/* ============================================================
+   UPDATE DASHBOARD (Filtered analytics only, does NOT re-train ML)
+   ============================================================ */
+function updateDashboard() {
+    applyFilters();
+    updateKPIs();
+    updateSalesTrend();
+    updateCategoryChart();
+    updateRegionChart();
+    updateProductChart();
+    updateSegmentChart();
+    updateProfitCategoryChart();
+    updateDiscountProfitChart();
+    updateStory();
+}
+
+/* ============================================================
+   KPI ANALYSIS
+   ============================================================ */
+function updateKPIs() {
+    const salesCol = findColumn(filteredData, ["Sales", "Amount", "Revenue"]);
+    const profitCol = findColumn(filteredData, ["Profit"]);
+    const qtyCol = findColumn(filteredData, ["Quantity", "Qty"]);
+    const orderCol = findColumn(filteredData, ["Order_ID", "OrderId"]);
+    const custCol = findColumn(filteredData, ["Customer_ID", "CustomerId", "Customer_Name"]);
+
+    let totalSales = 0;
+    let totalProfit = 0;
+    let totalQty = 0;
+
+    filteredData.forEach(row => {
+        if (salesCol) totalSales += Number(row[salesCol]) || 0;
+        if (profitCol) totalProfit += Number(row[profitCol]) || 0;
+        if (qtyCol) totalQty += Number(row[qtyCol]) || 0;
+    });
+
+    let totalOrders = orderCol
+        ? new Set(filteredData.map(r => r[orderCol]).filter(v => v !== null && v !== undefined && v !== "")).size
+        : filteredData.length;
+
+    let totalCustomers = custCol
+        ? new Set(filteredData.map(r => r[custCol]).filter(v => v !== null && v !== undefined && v !== "")).size
+        : totalOrders;
+
+    let profitMargin = totalSales !== 0 ? (totalProfit / totalSales) * 100 : 0;
+
+    document.getElementById("totalSales").innerText = formatNumber(totalSales);
+    document.getElementById("totalProfit").innerText = formatNumber(totalProfit);
+    document.getElementById("totalOrders").innerText = totalOrders.toLocaleString();
+    document.getElementById("totalQuantity").innerText = formatNumber(totalQty);
+    document.getElementById("totalCustomers").innerText = totalCustomers.toLocaleString();
+    document.getElementById("profitMargin").innerText = profitMargin.toFixed(2) + "%";
+}
+
+/* ============================================================
+   SALES TREND
+   ============================================================ */
+function updateSalesTrend() {
+    const dateCol = findColumn(filteredData, ["Order_Date", "OrderDate", "Date"]);
+    const salesCol = findColumn(filteredData, ["Sales", "Amount", "Revenue"]);
+
+    if (!dateCol || !salesCol) {
+        showEmptyChart("salesTrend", "Monthly Sales Trend not available (No Date field in this dataset)");
+        return;
+    }
+
+    const monthly = {};
+    filteredData.forEach(row => {
+        if (!row[dateCol]) return;
+        const date = new Date(row[dateCol]);
+        if (isNaN(date.getTime())) return;
+
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const key = `${year}-${month}`;
+        monthly[key] = (monthly[key] || 0) + (Number(row[salesCol]) || 0);
+    });
+
+    const sorted = Object.entries(monthly).sort();
+    if (sorted.length === 0) {
+        showEmptyChart("salesTrend", "No sales trend data available for current selection");
+        return;
+    }
+
+    Plotly.newPlot(
+        "salesTrend",
+        [{
+            x: sorted.map(item => item[0]),
+            y: sorted.map(item => item[1]),
+            type: "scatter",
+            mode: "lines+markers",
+            line: { color: "#4f46e5", width: 3 },
+            marker: { color: "#4f46e5", size: 6 }
+        }],
+        {
+            margin: { t: 20, b: 50, l: 60, r: 20 },
+            paper_bgcolor: "transparent",
+            plot_bgcolor: "transparent",
+            xaxis: { title: "Month" },
+            yaxis: { title: "Sales" },
+            hovermode: "x unified"
+        },
+        { responsive: true }
+    );
+}
+
+/* ============================================================
+   SALES BY CATEGORY
+   ============================================================ */
+function updateCategoryChart() {
+    const categoryCol = findColumn(filteredData, ["Category"]);
+    const salesCol = findColumn(filteredData, ["Sales", "Amount", "Revenue"]);
+
+    if (!categoryCol || !salesCol) {
+        showEmptyChart("categoryChart", "Category data not available");
+        return;
+    }
+
+    const grouped = groupData(filteredData, categoryCol, salesCol);
+    const sorted = Object.entries(grouped).sort((a, b) => b[1] - a[1]);
+
+    Plotly.newPlot(
+        "categoryChart",
+        [{
+            x: sorted.map(item => item[0]),
+            y: sorted.map(item => item[1]),
+            type: "bar",
+            marker: { color: "#6366f1" }
+        }],
+        {
+            margin: { t: 20, b: 60, l: 60, r: 20 },
+            paper_bgcolor: "transparent",
+            plot_bgcolor: "transparent",
+            xaxis: { title: "Category" },
+            yaxis: { title: "Sales" }
+        },
+        { responsive: true }
+    );
+}
+
+/* ============================================================
+   SALES BY REGION
+   ============================================================ */
+function updateRegionChart() {
+    const regionCol = findColumn(filteredData, ["Region"]);
+    const salesCol = findColumn(filteredData, ["Sales", "Amount", "Revenue"]);
+
+    if (!regionCol || !salesCol) {
+        showEmptyChart("regionChart", "Region data not available in this dataset");
+        return;
+    }
+
+    const grouped = groupData(filteredData, regionCol, salesCol);
+    const labels = Object.keys(grouped);
+    const values = Object.values(grouped);
+
+    if (labels.length === 0) {
+        showEmptyChart("regionChart", "No regional data available");
+        return;
+    }
+
+    Plotly.newPlot(
+        "regionChart",
+        [{
+            labels: labels,
+            values: values,
+            type: "pie",
+            hole: 0.55,
+            marker: {
+                colors: ["#4f46e5", "#06b6d4", "#10b981", "#f59e0b", "#ec4899", "#8b5cf6"]
+            }
+        }],
+        {
+            margin: { t: 10, b: 10, l: 10, r: 10 },
+            paper_bgcolor: "transparent"
+        },
+        { responsive: true }
+    );
+}
+
+/* ============================================================
+   TOP PRODUCTS
+   ============================================================ */
+function updateProductChart() {
+    const productCol = findColumn(filteredData, ["Product_Name", "ProductName", "Product"]);
+    const salesCol = findColumn(filteredData, ["Sales", "Amount", "Revenue"]);
+
+    if (!productCol || !salesCol) {
+        showEmptyChart("productChart", "Product details not available in this dataset");
+        return;
+    }
+
+    const grouped = groupData(filteredData, productCol, salesCol);
+    const sorted = Object.entries(grouped).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+    Plotly.newPlot(
+        "productChart",
+        [{
+            x: sorted.map(item => item[1]).reverse(),
+            y: sorted.map(item => item[0]).reverse(),
+            type: "bar",
+            orientation: "h",
+            marker: { color: "#3b82f6" }
+        }],
+        {
+            margin: { l: 180, r: 20, t: 20, b: 40 },
+            paper_bgcolor: "transparent",
+            plot_bgcolor: "transparent",
+            xaxis: { title: "Sales" }
+        },
+        { responsive: true }
+    );
+}
+
+/* ============================================================
+   SALES BY CUSTOMER SEGMENT
+   ============================================================ */
+function updateSegmentChart() {
+    const segmentCol = findColumn(filteredData, ["Segment"]);
+    const salesCol = findColumn(filteredData, ["Sales", "Amount", "Revenue"]);
+
+    if (!segmentCol || !salesCol) {
+        showEmptyChart("segmentChart", "Customer Segment data not available in this dataset");
+        return;
+    }
+
+    const grouped = groupData(filteredData, segmentCol, salesCol);
+    const sorted = Object.entries(grouped).sort((a, b) => b[1] - a[1]);
+
+    Plotly.newPlot(
+        "segmentChart",
+        [{
+            x: sorted.map(item => item[0]),
+            y: sorted.map(item => item[1]),
+            type: "bar",
+            marker: { color: "#8b5cf6" }
+        }],
+        {
+            margin: { t: 20, b: 60, l: 70, r: 20 },
+            paper_bgcolor: "transparent",
+            plot_bgcolor: "transparent",
+            xaxis: { title: "Customer Segment" },
+            yaxis: { title: "Sales" }
+        },
+        { responsive: true }
+    );
+}
+
+/* ============================================================
+   PROFIT BY CATEGORY
+   ============================================================ */
+function updateProfitCategoryChart() {
+    const categoryCol = findColumn(filteredData, ["Category"]);
+    const profitCol = findColumn(filteredData, ["Profit"]);
+
+    if (!categoryCol || !profitCol) {
+        showEmptyChart("profitCategoryChart", "Profit / Category data not available");
+        return;
+    }
+
+    const grouped = groupData(filteredData, categoryCol, profitCol);
+    const sorted = Object.entries(grouped).sort((a, b) => b[1] - a[1]);
+
+    Plotly.newPlot(
+        "profitCategoryChart",
+        [{
+            x: sorted.map(item => item[0]),
+            y: sorted.map(item => item[1]),
+            type: "bar",
+            marker: {
+                color: sorted.map(item => item[1] >= 0 ? "#10b981" : "#ef4444")
+            }
+        }],
+        {
+            margin: { t: 20, b: 60, l: 70, r: 20 },
+            paper_bgcolor: "transparent",
+            plot_bgcolor: "transparent",
+            xaxis: { title: "Category" },
+            yaxis: { title: "Profit" }
+        },
+        { responsive: true }
+    );
+}
+
+/* ============================================================
+   DISCOUNT VS PROFIT
+   ============================================================ */
+function updateDiscountProfitChart() {
+    const discountCol = findColumn(filteredData, ["Discount"]);
+    const profitCol = findColumn(filteredData, ["Profit"]);
+
+    if (!discountCol || !profitCol) {
+        showEmptyChart("discountProfitChart", "Discount data not available in this dataset");
+        return;
+    }
+
+    const discounts = [];
+    const profits = [];
+
+    filteredData.forEach(row => {
+        const d = Number(row[discountCol]);
+        const p = Number(row[profitCol]);
+        if (!isNaN(d) && !isNaN(p)) {
+            discounts.push(d);
+            profits.push(p);
+        }
+    });
+
+    if (discounts.length === 0) {
+        showEmptyChart("discountProfitChart", "No discount records available");
+        return;
+    }
+
+    Plotly.newPlot(
+        "discountProfitChart",
+        [{
+            x: discounts,
+            y: profits,
+            mode: "markers",
+            type: "scatter",
+            marker: {
+                size: 6,
+                color: "#ec4899",
+                opacity: 0.6
+            }
+        }],
+        {
+            margin: { t: 20, b: 60, l: 70, r: 20 },
+            paper_bgcolor: "transparent",
+            plot_bgcolor: "transparent",
+            xaxis: { title: "Discount" },
+            yaxis: { title: "Profit" }
+        },
+        { responsive: true }
+    );
+}
+
+/* ============================================================
+   DATA STORY & DECISION ANALYTICS
+   ============================================================ */
+function updateStory() {
+    if (filteredData.length === 0) {
+        document.getElementById("finding").innerText = "No data available for the selected filters.";
+        document.getElementById("meaning").innerText = "The selected filters returned no matching records.";
+        document.getElementById("decision").innerText = "Try selecting different filter options or reset filters.";
+        document.getElementById("recommendation").innerText = "Reset filters to explore complete dataset insights.";
+
+        document.getElementById("decisionFinding").innerText = "No active records match current criteria.";
+        document.getElementById("decisionMeaning").innerText = "Filtered dataset subset is empty.";
+        document.getElementById("decisionAction").innerText = "Broaden active filter selections.";
+        document.getElementById("decisionRecommendation").innerText = "Click Reset Filters to evaluate complete data.";
+        return;
+    }
+
+    const categoryCol = findColumn(filteredData, ["Category"]);
+    const salesCol = findColumn(filteredData, ["Sales", "Amount", "Revenue"]);
+    const profitCol = findColumn(filteredData, ["Profit"]);
+
+    let bestCategory = "Products";
+    let bestSales = 0;
+
+    if (categoryCol && salesCol) {
+        const catSales = groupData(filteredData, categoryCol, salesCol);
+        const sortedCats = Object.entries(catSales).sort((a, b) => b[1] - a[1]);
+        if (sortedCats.length > 0) {
+            bestCategory = sortedCats[0][0];
+            bestSales = sortedCats[0][1];
+        }
+    }
+
+    let totalSales = 0;
+    let totalProfit = 0;
+
+    filteredData.forEach(row => {
+        if (salesCol) totalSales += Number(row[salesCol]) || 0;
+        if (profitCol) totalProfit += Number(row[profitCol]) || 0;
+    });
+
+    let profitMargin = totalSales !== 0 ? (totalProfit / totalSales) * 100 : 0;
+
+    /* 1. Data Story Card */
+    document.getElementById("finding").innerText =
+        `${bestCategory} is the highest-performing category with sales of ${formatNumber(bestSales)}.`;
+
+    document.getElementById("meaning").innerText =
+        `The selected data contains ${filteredData.length.toLocaleString()} records. Total sales are ${formatNumber(totalSales)} and total profit is ${formatNumber(totalProfit)}, delivering a profit margin of ${profitMargin.toFixed(2)}%.`;
+
+    if (totalProfit > 0) {
+        document.getElementById("decision").innerText =
+            `The business should prioritize and capitalize on ${bestCategory} while actively monitoring unit margins.`;
+    } else {
+        document.getElementById("decision").innerText =
+            `The selected data is not generating positive profit. Pricing, discounts, and cost structure must be immediately reviewed.`;
+    }
+
+    if (profitMargin >= 20) {
+        document.getElementById("recommendation").innerText =
+            `Maintain strategic expansion in ${bestCategory} as strong profitability provides sustainable growth headroom.`;
+    } else if (profitMargin > 0) {
+        document.getElementById("recommendation").innerText =
+            `Continue supporting ${bestCategory}, but optimize pricing tier and discount thresholds to improve operating margin.`;
+    } else {
+        document.getElementById("recommendation").innerText =
+            `Rationalize promotional discounts and audit supplier costs in ${bestCategory} before scaling investment.`;
+    }
+
+    /* 2. Decision Analytics Section */
+    document.getElementById("decisionFinding").innerHTML =
+        `${bestCategory} generates the highest sales among the categories.<br>` +
+        `This makes ${bestCategory} a major revenue contributor.<br>` +
+        `Compare its profit with other categories.<br>` +
+        `Identify whether high sales also result in strong profits.`;
+
+    document.getElementById("decisionMeaning").innerHTML =
+        `The overall profit margin is ${profitMargin.toFixed(2)}%.<br>` +
+        `It represents the percentage of sales retained as profit.<br>` +
+        `Compare margins across categories.<br>` +
+        `Identify which categories offer better profitability.`;
+
+    document.getElementById("decisionAction").innerHTML =
+        `Prioritize products and categories that generate strong profits.<br>` +
+        `Review sales, profit, and discount patterns.<br>` +
+        `Consider both revenue and profitability.<br>` +
+        `Allocate resources based on the available evidence.`;
+
+    document.getElementById("decisionRecommendation").innerHTML =
+        `Promote products with strong sales and healthy profit margins.<br>` +
+        `Review pricing and discounts to protect profitability.<br>` +
+        `Avoid unnecessary costs where possible.<br>` +
+        `Use dashboard insights to guide inventory and marketing decisions.`;
+}
+
+/* ============================================================
+   RESET FILTERS
+   ============================================================ */
+function resetFilters() {
+    document.getElementById("yearFilter").value = "All";
+    document.getElementById("categoryFilter").value = "All";
+    document.getElementById("regionFilter").value = "All";
+    document.getElementById("segmentFilter").value = "All";
+    updateDashboard();
+}
+
+/* ============================================================
+   ML MODEL COMPARATIVE ANALYSIS (Runs on dataset switch only)
+   ============================================================ */
+function updateMLPrediction() {
+    document.getElementById("bestMLModel").innerText = "Training models...";
+    document.getElementById("bestMLR2").innerText = "...";
+    document.getElementById("bestMLMAE").innerText = "...";
+    document.getElementById("bestMLRMSE").innerText = "...";
+
+    document.getElementById("mlComparisonTable").innerHTML = `
+        <tr>
+            <td colspan="5" style="padding:20px; text-align:center; color:#64748b;">
+                <div style="display:inline-block; margin-right:8px;">⏳</div>
+                Training base literature models & Proposed Hybrid Stacked Regression Ensemble (HSRE) for ${selectedDataset}...
+            </td>
+        </tr>
+    `;
+
+    fetch("/ml-prediction?dataset=" + encodeURIComponent(selectedDataset))
+        .then(response => {
+            if (!response.ok) throw new Error("ML prediction endpoint error");
+            return response.json();
+        })
+        .then(result => {
+            if (result.error) {
+                console.error("ML Error:", result.error);
+                document.getElementById("bestMLModel").innerText = "N/A";
+                document.getElementById("bestMLR2").innerText = "N/A";
+                document.getElementById("bestMLMAE").innerText = "N/A";
+                document.getElementById("bestMLRMSE").innerText = "N/A";
+                document.getElementById("mlComparisonTable").innerHTML = `
+                    <tr>
+                        <td colspan="5" style="padding:15px; text-align:center; color:#ef4444;">
+                            ${result.error}
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const models = result.models;
+            if (!models || models.length === 0) return;
+
+            const bestModelName = result.best_model || models[0].model;
+            const bestR2Value = typeof result.best_r2 === "number" ? result.best_r2 : models[0].r2;
+            const bestMAEValue = typeof result.best_mae === "number" ? result.best_mae : models[0].mae;
+            const bestRMSEValue = typeof result.best_rmse === "number" ? result.best_rmse : models[0].rmse;
+
+            // 1. Update KPI Summary Cards
+            document.getElementById("bestMLModel").innerText = bestModelName;
+            document.getElementById("bestMLR2").innerText = bestR2Value.toFixed(4);
+            document.getElementById("bestMLMAE").innerText = bestMAEValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById("bestMLRMSE").innerText = bestRMSEValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            // 2. Populate Research Comparison Table
+            const table = document.getElementById("mlComparisonTable");
+            table.innerHTML = "";
+
+            models.forEach(model => {
+                const row = document.createElement("tr");
+                const isBest = model.model === bestModelName;
+                const isHSRE = model.model === "Proposed Hybrid Stacked Regression Ensemble (HSRE)";
+
+                if (isBest) {
+                    row.className = "highlight-best";
+                } else if (isHSRE) {
+                    row.className = "highlight-hsre";
+                }
+
+                let roleBadge = isHSRE
+                    ? '<span class="model-badge badge-proposed">Proposed Ensemble (Meta-Stacking)</span>'
+                    : '<span class="model-badge badge-base">Literature Base Learner</span>';
+
+                if (isBest) {
+                    roleBadge += ' <span class="model-badge badge-best">🏆 Best Performer</span>';
+                }
+
+                row.innerHTML = `
+                    <td style="padding:12px 16px; font-weight:${isHSRE || isBest ? '600' : 'normal'};">
+                        ${model.model}
+                    </td>
+                    <td style="padding:12px 16px;">${roleBadge}</td>
+                    <td style="padding:12px 16px; color:${model.r2 >= 0 ? '#059669' : '#dc2626'}; font-weight:600;">
+                        ${model.r2.toFixed(4)}
+                    </td>
+                    <td style="padding:12px 16px;">${model.mae.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                    <td style="padding:12px 16px;">${model.rmse.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                `;
+                table.appendChild(row);
+            });
+
+            // Model Colors Configuration
+            const getModelColor = (name, alpha = 1) => {
+                if (name === "Proposed Hybrid Stacked Regression Ensemble (HSRE)") return `rgba(109, 40, 217, ${alpha})`;
+                if (name === "Gradient Boosting") return `rgba(16, 185, 129, ${alpha})`;
+                if (name === "Random Forest") return `rgba(79, 70, 229, ${alpha})`;
+                if (name === "Decision Tree") return `rgba(245, 158, 11, ${alpha})`;
+                return `rgba(6, 182, 212, ${alpha})`;
+            };
+
+            // 3. Render Chart 1: R² Score Comparison Chart
+            Plotly.newPlot(
+                "mlR2Chart",
+                [{
+                    x: models.map(m => m.model),
+                    y: models.map(m => m.r2),
+                    type: "bar",
+                    text: models.map(m => m.r2.toFixed(4)),
+                    textposition: "auto",
+                    marker: {
+                        color: models.map(m => getModelColor(m.model, 0.9)),
+                        line: {
+                            color: models.map(m => m.model === bestModelName ? "#047857" : "#4338ca"),
+                            width: models.map(m => m.model === bestModelName ? 2 : 1)
+                        }
+                    }
+                }],
+                {
+                    margin: { t: 20, b: 80, l: 60, r: 20 },
+                    paper_bgcolor: "transparent",
+                    plot_bgcolor: "transparent",
+                    xaxis: { tickangle: -20, automargin: true },
+                    yaxis: { title: "R² Score (Higher is better)" }
+                },
+                { responsive: true }
+            );
+
+            // 4. Render Chart 2: MAE Comparison Chart
+            Plotly.newPlot(
+                "mlMAEChart",
+                [{
+                    x: models.map(m => m.model),
+                    y: models.map(m => m.mae),
+                    type: "bar",
+                    text: models.map(m => m.mae.toFixed(1)),
+                    textposition: "auto",
+                    marker: {
+                        color: models.map(m => getModelColor(m.model, 0.85))
+                    }
+                }],
+                {
+                    margin: { t: 20, b: 80, l: 60, r: 20 },
+                    paper_bgcolor: "transparent",
+                    plot_bgcolor: "transparent",
+                    xaxis: { tickangle: -20, automargin: true },
+                    yaxis: { title: "MAE (Lower is better)" }
+                },
+                { responsive: true }
+            );
+
+            // 5. Render Chart 3: RMSE Comparison Chart
+            Plotly.newPlot(
+                "mlRMSEChart",
+                [{
+                    x: models.map(m => m.model),
+                    y: models.map(m => m.rmse),
+                    type: "bar",
+                    text: models.map(m => m.rmse.toFixed(1)),
+                    textposition: "auto",
+                    marker: {
+                        color: models.map(m => getModelColor(m.model, 0.85))
+                    }
+                }],
+                {
+                    margin: { t: 20, b: 80, l: 60, r: 20 },
+                    paper_bgcolor: "transparent",
+                    plot_bgcolor: "transparent",
+                    xaxis: { tickangle: -20, automargin: true },
+                    yaxis: { title: "RMSE (Lower is better)" }
+                },
+                { responsive: true }
+            );
+
+            // 6. Render Chart 4: Proposed Hybrid Stacked Regression Ensemble (HSRE) Actual vs Predicted Sales
+            const avp = result.actual_vs_predicted || [];
+            if (avp.length > 0) {
+                const sampleIds = avp.map(item => `Test #${item.sample_id}`);
+                const actualVals = avp.map(item => item.actual);
+                const predVals = avp.map(item => item.predicted);
+
+                Plotly.newPlot(
+                    "mlHSREActualVsPredChart",
+                    [
+                        {
+                            x: sampleIds,
+                            y: actualVals,
+                            name: "Actual Sales",
+                            mode: "lines+markers",
+                            type: "scatter",
+                            line: { color: "#3b82f6", width: 2 },
+                            marker: { size: 6, color: "#2563eb" }
+                        },
+                        {
+                            x: sampleIds,
+                            y: predVals,
+                            name: "HSRE Predicted Sales",
+                            mode: "lines+markers",
+                            type: "scatter",
+                            line: { color: "#7c3aed", width: 2, dash: "dot" },
+                            marker: { size: 6, symbol: "diamond", color: "#6d28d9" }
+                        }
+                    ],
+                    {
+                        margin: { t: 20, b: 60, l: 60, r: 20 },
+                        paper_bgcolor: "transparent",
+                        plot_bgcolor: "transparent",
+                        xaxis: { title: "Evaluation Test Samples", showticklabels: false },
+                        yaxis: { title: "Sales ($)" },
+                        legend: { orientation: "h", y: 1.15, x: 0.2 },
+                        hovermode: "x unified"
+                    },
+                    { responsive: true }
+                );
+            } else {
+                showEmptyChart("mlHSREActualVsPredChart", "Actual vs Predicted points not available");
+            }
+        })
+        .catch(error => {
+            console.error("ML comparison error:", error);
+            document.getElementById("bestMLModel").innerText = "Error";
+            document.getElementById("bestMLR2").innerText = "Error";
+            document.getElementById("bestMLMAE").innerText = "Error";
+            document.getElementById("bestMLRMSE").innerText = "Error";
+        });
+}
+
+/* ============================================================
+   INITIALIZATION & EVENT LISTENERS
+   ============================================================ */
+document.addEventListener("DOMContentLoaded", function () {
+    // Dataset switch event listener
+    document.getElementById("datasetFilter").addEventListener("change", function () {
+        loadDataset(this.value);
+    });
+
+    // Dimension filter listeners (only update dashboard analytics, do NOT retrain ML)
+    ["yearFilter", "categoryFilter", "regionFilter", "segmentFilter"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener("change", updateDashboard);
+        }
+    });
+
+    // Load default dataset
+    loadDataset("superstore");
+});
+
+</script>
+
+</body>
+</html>
